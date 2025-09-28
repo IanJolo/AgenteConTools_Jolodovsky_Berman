@@ -1,4 +1,3 @@
-// Gestión de estudiantes
 import { readFileSync, writeFileSync } from 'fs';
 
 const DATA_FILE = './data/alumnos.json';
@@ -7,17 +6,6 @@ class Estudiantes {
   constructor() {
     this.estudiantes = [];
   }
-
-  normalizar(str) {
-    if (typeof str !== 'string') return '';
-    return str
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .toLowerCase()
-      .trim();
-  }
-
-
   
   cargarEstudiantesDesdeJson() {
     try {
@@ -39,28 +27,98 @@ class Estudiantes {
   }
 
   agregarEstudiante(nombre, apellido, curso) {
-    const nuevoEstudiante = { nombre, apellido, curso };
+    if (!nombre || !apellido || !curso) {
+      throw new Error("Todos los campos (nombre, apellido, curso) son obligatorios");
+    }
+
+    const estudianteExistente = this.estudiantes.find(
+      estudiante => estudiante.nombre.toLowerCase() === nombre.toLowerCase() && 
+                   estudiante.apellido.toLowerCase() === apellido.toLowerCase()
+    );
+
+    if (estudianteExistente) {
+      throw new Error(`El estudiante ${nombre} ${apellido} ya existe en el sistema`);
+    }
+
+    const nuevoEstudiante = {
+      nombre: nombre.trim(),
+      apellido: apellido.trim(),
+      curso: curso.trim()
+    };
+
     this.estudiantes.push(nuevoEstudiante);
+    
     this.guardarEstudiantes();
-    return `Estudiante ${nombre} ${apellido} agregado al curso ${curso}`;
+    
+    return `✅ ${nombre} ${apellido} fue registrado en el curso ${curso}`;
   }
 
-    buscarEstudiantePorNombre(nombre) {
-      const needle = this.normalizar(nombre);
-      return this.estudiantes.filter((estudiante) =>
-        this.normalizar(estudiante.nombre).includes(needle)
-      );
-    }
-  
-    buscarEstudiantePorApellido(apellido) {
-      const needle = this.normalizar(apellido);
-      return this.estudiantes.filter((estudiante) =>
-        this.normalizar(estudiante.apellido).includes(needle)
-      );
+  buscarEstudiantePorNombre(nombre) {
+    if (!nombre) {
+      throw new Error("El nombre es obligatorio para la búsqueda");
     }
 
+    const nombreBusqueda = nombre.toLowerCase().trim();
+    const estudiantesEncontrados = this.estudiantes.filter(
+      estudiante => estudiante.nombre.toLowerCase().includes(nombreBusqueda)
+    );
+
+    if (estudiantesEncontrados.length === 0) {
+      return `❌ No hay estudiantes registrados con el nombre "${nombre}"`;
+    }
+
+    const resultado = estudiantesEncontrados.map(estudiante => 
+      `${estudiante.nombre} ${estudiante.apellido} - Curso: ${estudiante.curso}`
+    ).join('\n');
+
+    return `🔍 Resultados para "${nombre}":\n${resultado}`;
+  }
+
+  buscarEstudiantePorApellido(apellido) {
+    if (!apellido) {
+      throw new Error("El apellido es obligatorio para la búsqueda");
+    }
+
+    const apellidoBusqueda = apellido.toLowerCase().trim();
+    const estudiantesEncontrados = this.estudiantes.filter(
+      estudiante => estudiante.apellido.toLowerCase().includes(apellidoBusqueda)
+    );
+
+    if (estudiantesEncontrados.length === 0) {
+      return `❌ No hay estudiantes registrados con el apellido "${apellido}"`;
+    }
+
+    const resultado = estudiantesEncontrados.map(estudiante => 
+      `${estudiante.nombre} ${estudiante.apellido} - Curso: ${estudiante.curso}`
+    ).join('\n');
+
+    return `🔍 Resultados para apellido "${apellido}":\n${resultado}`;
+  }
+
   listarEstudiantes() {
-    return this.estudiantes;
+    if (this.estudiantes.length === 0) {
+      return "📋 El sistema no tiene estudiantes registrados";
+    }
+
+    const estudiantesPorCurso = this.estudiantes.reduce((acc, estudiante) => {
+      if (!acc[estudiante.curso]) {
+        acc[estudiante.curso] = [];
+      }
+      acc[estudiante.curso].push(estudiante);
+      return acc;
+    }, {});
+
+    let resultado = `📊 Registro de estudiantes (${this.estudiantes.length} alumnos):\n\n`;
+    
+    Object.keys(estudiantesPorCurso).sort().forEach(curso => {
+      resultado += `🎓 Curso ${curso}:\n`;
+      estudiantesPorCurso[curso].forEach(estudiante => {
+        resultado += `  • ${estudiante.nombre} ${estudiante.apellido}\n`;
+      });
+      resultado += '\n';
+    });
+
+    return resultado.trim();
   }
 }
 
